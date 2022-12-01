@@ -39,74 +39,9 @@ class Decoder(nn.Module):
         return self.decoder(x)
 
 
-class Network(nn.Module):
-    def __init__(self, view, input_size, feature_dim, high_feature_dim, class_num):
-        super(Network, self).__init__()
-        self.encoders = []
-        self.decoders = []
-        for v in range(view):
-            self.encoders.append(Encoder(input_size[v], feature_dim))
-            self.decoders.append(Decoder(input_size[v], feature_dim))
-        self.encoders = nn.ModuleList(self.encoders)
-        self.decoders = nn.ModuleList(self.decoders)
-
-        self.feature_contrastive_module = nn.Sequential(
-            nn.Linear(feature_dim, feature_dim),
-            nn.ReLU(),
-            nn.Linear(feature_dim, high_feature_dim),
-            nn.BatchNorm1d(high_feature_dim, affine=False)
-            # Varying the number of layers of W can obtain the representations with different shapes.
-        )
-        self.label_contrastive_module = nn.Sequential(
-            nn.Linear(feature_dim, class_num),
-            nn.Softmax(dim=1)
-        )
-        self.view = view
-
-    def forward(self, xs):
-        hs = []
-        qs = []
-        xrs = []
-        zs = []
-        for v in range(self.view):
-            x = xs[v]
-            z = self.encoders[v](x)
-            h = normalize(self.feature_contrastive_module(z), dim=1)
-            q = self.label_contrastive_module(z)
-            xr = self.decoders[v](z)
-            hs.append(h)
-            zs.append(z)
-            qs.append(q)
-            xrs.append(xr)
-        return hs, qs, xrs, zs
-
-    def forward_plot(self, xs):
-        zs = []
-        hs = []
-        for v in range(self.view):
-            x = xs[v]
-            z = self.encoders[v](x)
-            zs.append(z)
-            h = self.feature_contrastive_module(z)
-            hs.append(h)
-        return zs, hs
-
-    def forward_cluster(self, xs):
-        qs = []
-        preds = []
-        for v in range(self.view):
-            x = xs[v]
-            z = self.encoders[v](x)
-            q = self.label_contrastive_module(z)
-            pred = torch.argmax(q, dim=1)
-            qs.append(q)
-            preds.append(pred)
-        return qs, preds
-
-
-class DDPM(nn.Module):
+class MC_DPGMM(nn.Module):
     def __init__(self, view, input_size, feature_dim, init_v=-2):
-        super(DDPM, self).__init__()
+        super(MC_DPGMM, self).__init__()
         self.encoders = []
         self.decoders = []
         for v in range(view):
@@ -115,13 +50,6 @@ class DDPM(nn.Module):
         self.encoders = nn.ModuleList(self.encoders)
         self.decoders = nn.ModuleList(self.decoders)
 
-        #self.feature_contrastive_module = nn.Sequential(
-        #    nn.Linear(feature_dim, feature_dim),
-        #    nn.ReLU(),
-        #    nn.Linear(feature_dim, high_feature_dim),
-        #    nn.BatchNorm1d(high_feature_dim, affine=False)
-            # Varying the number of layers of W can obtain the representations with different shapes.
-        #)
         self.label_contrastive_module = DirichletGaussianLayer(feature_dim, init_v=init_v)
         self.view = view
 
