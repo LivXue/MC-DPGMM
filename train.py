@@ -79,7 +79,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='train')
     parser.add_argument('--dataset', default=Dataname)
     parser.add_argument('--batch_size', default=256, type=int)
-    parser.add_argument("--temperature_f", default=0.5)
     parser.add_argument("--learning_rate", default=0.0003)
     parser.add_argument("--weight_decay", default=0.)
     parser.add_argument("--workers", default=8)
@@ -146,7 +145,7 @@ if __name__ == '__main__':
     # print(model)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-    criterion = Loss(args.batch_size, args.temperature_f, args.temperature_c, args.temperature_s).to(device)
+    criterion = Loss(args.batch_size, args.temperature_c, args.temperature_s).to(device)
     best_model_wts = copy.deepcopy(model.state_dict())
 
     epoch = 1
