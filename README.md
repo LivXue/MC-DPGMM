@@ -21,6 +21,6 @@ You can download the features of the datasets from:
 Here we provide the implementation of our proposed model, along with datasets. The repository is organised as follows:
 
  - `data/` contains the necessary dataset files;
- - `nework.py` contains the implementation of our odel;
+ - `network.py` contains the implementation of our odel;
  
  Finally, `train.py` puts all of the above together and can be used to execute a full training.
