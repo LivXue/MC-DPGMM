@@ -7,7 +7,7 @@ import copy
 import torch
 import numpy as np
 
-from network import DDPM
+from network import MC_DPGMM
 from metric import valid
 from loss import Loss
 from dataloader import load_data, DataLoaderX
@@ -63,14 +63,6 @@ def contrastive_train(epoch):
     print('Epoch {}'.format(epoch), 'Loss:{:.6f}'.format(tot_loss/len(data_loader)))
 
 
-def compute_n_clusters(pred):
-    n_clusters = {i: 0 for i in np.unique(pred)}
-    for i in pred:
-        n_clusters[i] += 1
-
-    return n_clusters
-
-
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
     time0 = time.time()
@@ -98,7 +90,6 @@ if __name__ == '__main__':
     parser.add_argument("--epsilon", default=1)
     parser.add_argument("--omega", default=1)
     parser.add_argument("--init_v", default=-2)
-    #parser.add_argument("--high_feature_dim", default=128)
     args = parser.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -111,24 +102,18 @@ if __name__ == '__main__':
     if args.dataset == "BDGP":
         args.temperature_c = 4.47
         args.temperature_s = 0.6
-        args.init_v = -1
-        args.lamb = 100
-        args.epsilon = 2
         seed = 1
     if args.dataset == "CCV":
         args.temperature_c = 0.2
         args.temperature_s = 0.5
-        args.lamb = 0.00001
         seed = 1
     if args.dataset == "Fashion":
         args.temperature_c = 0.7
         args.temperature_s = 4.3
-        args.lamb = 0.00005
         seed = 1
     if args.dataset == "Caltech-2V":
         args.temperature_c = 0.6
         args.temperature_s = 0.5
-        args.lamb = 1
         seed = 3
     if args.dataset == "Caltech-3V":
         args.temperature_c = 1.1
@@ -157,14 +142,12 @@ if __name__ == '__main__':
     if not os.path.exists('./models'):
         os.makedirs('./models')
 
-    #model = Network(view, dims, args.feature_dim, args.high_feature_dim, class_num)
-    model = DDPM(view, dims, args.feature_dim, args.init_v)
+    model = MC_DPGMM(view, dims, args.feature_dim, args.init_v)
     # print(model)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     criterion = Loss(args.batch_size, args.temperature_f, args.temperature_c, args.temperature_s).to(device)
     best_model_wts = copy.deepcopy(model.state_dict())
-    infered_K = []
 
     epoch = 1
     while epoch <= args.mse_epochs:
@@ -174,9 +157,7 @@ if __name__ == '__main__':
             best_score = acc + nmi + pur
             best_accs, best_nmis, best_purs = acc, nmi, pur
             best_pred, best_label = pred, label
-            n_clusters = compute_n_clusters(pred)
             best_model_wts = copy.deepcopy(model.state_dict())
-            infered_K.append(len(n_clusters))
         epoch += 1
     while epoch <= args.mse_epochs + args.con_epochs:
         contrastive_train(epoch)
@@ -187,7 +168,6 @@ if __name__ == '__main__':
                 best_score = acc + nmi + pur
                 best_accs, best_nmis, best_purs = acc, nmi, pur
                 best_pred, best_label = pred, label
-                n_clusters = compute_n_clusters(pred)
                 best_model_wts = copy.deepcopy(model.state_dict())
         epoch += 1
 
@@ -198,7 +178,6 @@ if __name__ == '__main__':
 
     print("******Best Scores******")
     print('ACC = {:.4f} NMI = {:.4f} PUR={:.4f} SUM={:.4f}'.format(best_accs, best_nmis, best_purs, best_score))
-    print('Assigned to {} clusters; Ground truth: {} clusters'.format(len(n_clusters), class_num))
 
     train_time = time.time() - time0
     print('****** End, training time = {} s ******'.format(round(train_time, 2)))
