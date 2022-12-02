@@ -1,6 +1,6 @@
 ## Multi-view Clustering With Unknown Cluster Number
 
-This repository contains the author's implementation in PyTorch for the TPAMI submission "Multi-view Clustering With Unknown Cluster Number".
+This repository contains the author's implementation in PyTorch for "Multi-view Clustering With Unknown Cluster Number".
 
 ## Dependencies
 
